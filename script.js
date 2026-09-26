@@ -165,11 +165,15 @@ function renderReferenceGrid(){
       '<div class="ref-formula">'+def.semitones+' semitone'+(def.semitones===1?"":"s")+
         (invertName ? '  ·  inverts to '+invertName : '') +
       '</div>' +
-      '<div class="piano ref-piano" data-semitones="'+def.semitones+'"></div>' +
+      '<div class="ref-piano-group">' +
+        '<div class="piano ref-piano" data-semitones="'+def.semitones+'"></div>' +
+        '<div class="roll-panel ref-roll-panel"><div class="roll-keys"></div><div class="roll"></div></div>' +
+      '</div>' +
       '<div class="ref-mnemonic">'+MNEMONICS[def.semitones]+'</div>';
     grid.appendChild(card);
 
     const pianoEl = card.querySelector(".ref-piano");
+    const rollPanelEl = card.querySelector(".ref-roll-panel");
     const root = 60, target = 60 + def.semitones;
     const playThis = ()=> playSequence([root, target], 0.42, 0.12);
     renderPiano(pianoEl, ()=>playThis(), 60, 72);
@@ -177,6 +181,13 @@ function renderReferenceGrid(){
     highlightKey(pianoEl, target, "hi-target");
     pianoEl.style.cursor = "pointer";
     pianoEl.title = "Click to hear it";
+
+    renderPianoRoll(rollPanelEl, 60, 72, [
+      {midi:root, start:0, duration:3, cls:"hi-root"},
+      {midi:target, start:4, duration:3, cls:"hi-target"}
+    ]);
+    rollPanelEl.onclick = playThis;
+    rollPanelEl.title = "Click to hear it";
   });
 }
 
@@ -260,6 +271,54 @@ function clearHighlights(container){
 function highlightKey(container, midi, cls){
   const key = container.querySelector('[data-midi="'+midi+'"]');
   if(key) key.classList.add(cls);
+}
+
+// ---------- Piano roll rendering (FL-Studio-style: vertical keybed + note grid) ----------
+// panelEl must contain a ".roll-keys" element and a ".roll" element (see ref-piano-group markup).
+// notes: [{midi, start, duration, cls}] — start/duration in whole grid columns (0..ROLL_COLS),
+// so bar edges always land exactly on the background gridlines (see .roll's background-size in CSS).
+const ROLL_COLS = 8;
+function renderPianoRoll(panelEl, low, high, notes){
+  const keysEl = panelEl.querySelector(".roll-keys");
+  const gridEl = panelEl.querySelector(".roll");
+  keysEl.innerHTML = "";
+  gridEl.innerHTML = "";
+  const totalRows = high - low + 1;
+  const rowHeight = 100/totalRows;
+  for(let m=low; m<=high; m++){
+    const row = high - m;
+    const isBlack = BLACK_STEPS.includes(((m%12)+12)%12);
+
+    const keyEl = document.createElement("div");
+    keyEl.className = "roll-key " + (isBlack ? "roll-key-black" : "roll-key-white");
+    keyEl.style.top = (row*rowHeight)+"%";
+    keyEl.style.height = rowHeight+"%";
+    if(!isBlack && m%12===0){
+      const label = document.createElement("span");
+      label.className = "roll-key-label";
+      label.textContent = noteName(m);
+      if(row === 0) label.style.top = "0";
+      else label.style.bottom = "0";
+      keyEl.appendChild(label);
+    }
+    keysEl.appendChild(keyEl);
+
+    const rowEl = document.createElement("div");
+    rowEl.className = "roll-row" + (isBlack ? " roll-row-black" : "");
+    rowEl.style.top = (row*rowHeight)+"%";
+    rowEl.style.height = rowHeight+"%";
+    gridEl.appendChild(rowEl);
+  }
+  notes.forEach(n=>{
+    const row = high - n.midi;
+    const bar = document.createElement("div");
+    bar.className = "roll-note " + n.cls;
+    bar.style.top = (row*rowHeight + rowHeight*0.16)+"%";
+    bar.style.height = (rowHeight*0.68)+"%";
+    bar.style.left = (n.start/ROLL_COLS*100)+"%";
+    bar.style.width = (n.duration/ROLL_COLS*100)+"%";
+    gridEl.appendChild(bar);
+  });
 }
 
 // ---------- Quiz ----------
@@ -508,15 +567,24 @@ function renderChordReferenceGrid(){
     card.innerHTML =
       '<div class="ref-name">'+deg.roman+' <span class="fn-badge '+deg.function+'">'+FUNCTION_SHORT[deg.function]+'</span></div>' +
       '<div class="ref-formula">'+chordName(notes[0], i)+'</div>' +
-      '<div class="piano ref-piano"></div>';
+      '<div class="ref-piano-group">' +
+        '<div class="piano ref-piano"></div>' +
+        '<div class="roll-panel ref-roll-panel"><div class="roll-keys"></div><div class="roll"></div></div>' +
+      '</div>';
     grid.appendChild(card);
     const pianoEl = card.querySelector(".ref-piano");
+    const rollPanelEl = card.querySelector(".ref-roll-panel");
     const low = notes[0], high = notes[0]+12;
-    renderPiano(pianoEl, ()=>playProgression([notes], 0.9, 0), low, high);
+    const playThis = ()=> playProgression([notes], 0.9, 0);
+    renderPiano(pianoEl, playThis, low, high);
     const hiClass = {tonic:"hi-target", subdominant:"hi-root", dominant:"hi-tension"}[deg.function];
     highlightKeys(pianoEl, notes, hiClass);
     pianoEl.style.cursor = "pointer";
     pianoEl.title = "Click to hear it";
+
+    renderPianoRoll(rollPanelEl, low, high, notes.map(m=>({midi:m, start:0, duration:6, cls:hiClass})));
+    rollPanelEl.onclick = playThis;
+    rollPanelEl.title = "Click to hear it";
   });
 }
 

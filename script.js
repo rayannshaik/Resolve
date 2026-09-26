@@ -225,7 +225,8 @@ function onExploreKeyClick(midi){
   } else {
     const [a,b] = exploreSelection;
     const dist = Math.abs(b-a);
-    const def = INTERVALS.find(iv=>iv.semitones === (dist>12 ? dist%12 || 12 : dist));
+    const reducedDist = dist>12 ? (dist%12 || 12) : dist;
+    const def = INTERVALS.find(iv=>iv.semitones === reducedDist);
     highlightKey(piano, a, "hi-root");
     highlightKey(piano, b, "hi-target");
     readout.innerHTML = noteName(a)+" → "+noteName(b)+" is a <strong>"+(def?def.name:dist+" semitones")+"</strong> ("+dist+" semitones)";

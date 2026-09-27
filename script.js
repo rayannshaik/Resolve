@@ -56,7 +56,7 @@ function playSequence(midis, noteDur, gap){
 }
 
 // ---------- Progress storage ----------
-let progress = { intervalStats:{}, totalCorrect:0, totalAttempts:0, appliedPrompts:{}, functionStats:{}, chordStats:{}, appliedChordPrompts:{} };
+let progress = { intervalStats:{}, totalCorrect:0, totalAttempts:0, appliedPrompts:{}, functionStats:{}, chordStats:{}, appliedChordPrompts:{}, progressionStats:{}, appliedProgPrompts:{} };
 
 async function loadProgress(){
   try{
@@ -71,6 +71,8 @@ async function loadProgress(){
   progress.functionStats = progress.functionStats || {};
   progress.chordStats = progress.chordStats || {};
   progress.appliedChordPrompts = progress.appliedChordPrompts || {};
+  progress.progressionStats = progress.progressionStats || {};
+  progress.appliedProgPrompts = progress.appliedProgPrompts || {};
 }
 function saveProgress(){
   try{
@@ -83,7 +85,7 @@ function saveProgress(){
 const MODULES = [
   {id:"intervals", label:"Intervals", soon:false},
   {id:"chords", label:"Chord Functions", soon:false},
-  {id:"progressions", label:"Progressions", soon:true, blurb:"Recognizing common progressions by ear, not just by chart."},
+  {id:"progressions", label:"Progressions", soon:false},
   {id:"modes", label:"Modes & Color", soon:true, blurb:"Beyond major/minor — the moods hiding in modal harmony."}
 ];
 let activeModule = "intervals";
@@ -120,8 +122,16 @@ function renderModule(){
     container.appendChild(buildChordApplyCard());
     return;
   }
+  if(activeModule === "progressions"){
+    container.appendChild(buildProgressionConceptCard());
+    container.appendChild(buildCadenceCard());
+    container.appendChild(buildProgressionReferenceCard());
+    container.appendChild(buildProgressionQuizCard());
+    container.appendChild(buildProgressionApplyCard());
+    return;
+  }
   if(mod.soon){
-    container.innerHTML = '<section class="card soon-card"><h2>'+mod.label+'</h2><p>'+mod.blurb+'</p><p>Coming after Chord Functions.</p></section>';
+    container.innerHTML = '<section class="card soon-card"><h2>'+mod.label+'</h2><p>'+mod.blurb+'</p><p>Coming soon.</p></section>';
   }
 }
 
@@ -193,7 +203,7 @@ function renderReferenceGrid(){
 
 function buildConceptCard(){
   const el = document.createElement("section");
-  el.className = "card";
+  el.className = "card concept-card";
   el.innerHTML =
     '<h2>What an interval actually is</h2>' +
     '<p>An interval is just the distance between two notes. Every scale, chord, and melody you\'ve ever heard is built from intervals stacked in specific patterns.</p>' +
@@ -518,12 +528,16 @@ const CHORD_APPLY_PROMPTS = [
 // ---- Concept ----
 function buildChordConceptCard(){
   const el = document.createElement("section");
-  el.className = "card";
+  el.className = "card concept-card";
   el.innerHTML =
     '<h2>Why some chords want to move</h2>' +
-    '<p>You already know how to stack thirds to build I, ii, iii, IV, V, vi, and vii° — they\'re just triads built on each note of the major scale. What\'s new here is this: each of those seven chords belongs to one of three functional families, and knowing which family a chord belongs to tells you where it wants to go next.</p>' +
-    '<p><strong style="color:var(--resolution)">Tonic</strong> feels like home — resolved, at rest. <strong style="color:var(--movement)">Subdominant</strong> feels like leaving home — gathering motion. <strong style="color:var(--tension)">Dominant</strong> feels unstable — straining to get back home.</p>' +
-    '<p>Home → leave → build tension → come back. That four-step engine is behind almost every chord progression you\'ve ever heard. Scale highlighting can tell you a note is "in the key." It can\'t tell you that V wants to resolve to I. That\'s function.</p>';
+    '<p>Every chord you build — I, ii, iii, IV, V, vi, vii° — belongs to one of three families. Knowing which one tells you where it wants to go next.</p>' +
+    '<ul class="fn-list">' +
+      '<li><strong style="color:var(--resolution)">Tonic</strong> — feels like home. Resolved, at rest.</li>' +
+      '<li><strong style="color:var(--movement)">Subdominant</strong> — feels like leaving. Gathering motion.</li>' +
+      '<li><strong style="color:var(--tension)">Dominant</strong> — feels like tension. Straining to get back home.</li>' +
+    '</ul>' +
+    '<p>Home → leave → tension → home. That\'s the engine behind almost every progression you\'ve ever heard — and it\'s what scale highlighting can\'t show you.</p>';
   return el;
 }
 
@@ -768,6 +782,231 @@ function renderChordPrompts(){
       else delete progress.appliedChordPrompts[p.id];
       saveProgress();
       renderChordPrompts();
+    });
+    list.appendChild(row);
+  });
+}
+
+// ================= Progressions module =================
+const CADENCES = [
+  {id:"authentic", label:"Authentic cadence", degrees:[4,0], desc:"the strongest resolution", btnClass:""},
+  {id:"plagal", label:"Plagal cadence", degrees:[3,0], desc:"the softer, \"amen\" resolution", btnClass:"alt"},
+  {id:"half", label:"Half cadence", degrees:[0,4], desc:"left hanging on purpose, unresolved", btnClass:"hang"},
+  {id:"deceptive", label:"Deceptive cadence", degrees:[4,5], desc:"sets up a resolution, then surprises you with a different chord", btnClass:"dim"}
+];
+
+const PROGRESSIONS = [
+  {id:"pg1", degrees:[0,4,5,3], note:"The most common pop progression — always circles back toward tension before landing home again."},
+  {id:"pg2", degrees:[5,3,0,4], note:"The same four chords, started in a different place — proof that where a loop starts changes how it feels."},
+  {id:"pg3", degrees:[0,3,4,0], note:"The classic blues/rock backbone."},
+  {id:"pg4", degrees:[1,4,0], note:"The jazz turnaround."},
+  {id:"pg5", degrees:[0,5,3,4], note:"The \"50s progression\" — doo-wop and early rock's default loop."},
+  {id:"pg6", degrees:[5,4,3,4], note:"A moodier, minor-feeling loop common in lo-fi — notice it never actually resolves to I."}
+];
+
+const PROG_APPLY_PROMPTS = [
+  {id:"g1", text:"Build I–V–vi–IV in any key and loop it for 8 bars."},
+  {id:"g2", text:"Identify which cadence one of your own progressions ends on."},
+  {id:"g3", text:"Swap an authentic cadence for a deceptive one in something you've made, and notice the effect."}
+];
+
+function progressionRoman(degrees){
+  return degrees.map(i => DEGREES[i].roman).join("–");
+}
+function progressionChords(root, degrees){
+  return degrees.map(i => triadNotes(root, i));
+}
+
+// ---- Concept ----
+function buildProgressionConceptCard(){
+  const el = document.createElement("section");
+  el.className = "card concept-card";
+  el.innerHTML =
+    '<h2>A progression is a path, not a list</h2>' +
+    '<p>A chord progression isn\'t a fixed sequence you memorize — it\'s Tonic, Subdominant, and Dominant functions strung together with intent. Every progression is a little story: leave home, build tension, come back — or deliberately don\'t.</p>' +
+    '<p><strong style="color:var(--resolution)">Tonic</strong>, <strong style="color:var(--movement)">Subdominant</strong>, and <strong style="color:var(--tension)">Dominant</strong> are the same three functions from Chord Functions — a progression is just a path through them. The same four chords can feel completely different depending on the order you play them in and where you choose to end. Once you\'re hearing progressions as home → leave → tension → (maybe) home again, you can predict how an unfamiliar progression will feel before you ever look up its Roman numerals.</p>';
+  return el;
+}
+
+// ---- Cadences ----
+function buildCadenceCard(){
+  const el = document.createElement("section");
+  el.className = "card";
+  el.innerHTML =
+    '<h2>How progressions end</h2>' +
+    '<p>The last two chords of a progression — the cadence — decide whether it feels finished, gentle, unfinished, or surprising. Same functions you already know, just placed at the end.</p>' +
+    '<div class="demo-grid">' +
+      CADENCES.map(c=>
+        '<div class="demo-row"><button class="demo-btn '+c.btnClass+'" id="cad-'+c.id+'">'+c.label+'</button><span class="demo-caption">'+c.desc+'</span></div>'
+      ).join('') +
+    '</div>';
+  setTimeout(()=>{
+    CADENCES.forEach(c=>{
+      document.getElementById("cad-"+c.id).onclick = ()=>{
+        playProgression(progressionChords(chordRoot, c.degrees), 0.9, 0.05);
+      };
+    });
+  }, 0);
+  return el;
+}
+
+// ---- Reference catalog ----
+function buildProgressionReferenceCard(){
+  const el = document.createElement("section");
+  el.className = "card";
+  el.innerHTML =
+    '<h2>Six progressions worth knowing</h2>' +
+    '<p>Click "Play loop" to hear each one played straight through in the current key. Same function colors as before: <span class="fn-badge tonic">Tonic</span> <span class="fn-badge subdominant">Subdominant</span> <span class="fn-badge dominant">Dominant</span>.</p>' +
+    '<div class="ref-grid" id="prog-ref-grid"></div>';
+  setTimeout(renderProgressionReferenceGrid, 0);
+  return el;
+}
+function renderProgressionReferenceGrid(){
+  const grid = document.getElementById("prog-ref-grid");
+  if(!grid) return;
+  grid.innerHTML = "";
+  PROGRESSIONS.forEach(p=>{
+    const card = document.createElement("div");
+    card.className = "ref-card prog-card";
+    card.innerHTML =
+      '<div class="prog-roman">' +
+        p.degrees.map(i=>'<span class="fn-badge '+DEGREES[i].function+'">'+DEGREES[i].roman+'</span>').join('<span class="prog-arrow">–</span>') +
+      '</div>' +
+      '<p class="prog-note">'+p.note+'</p>' +
+      '<button class="play-btn prog-play-btn">Play loop</button>';
+    grid.appendChild(card);
+    card.querySelector(".prog-play-btn").onclick = ()=>{
+      playProgression(progressionChords(chordRoot, p.degrees), 0.7, 0.05);
+    };
+  });
+}
+
+// ---- Quiz ----
+let currentProgQuestion = null;
+let progSessionCorrect = 0, progSessionTotal = 0;
+
+function buildProgressionQuizCard(){
+  const el = document.createElement("section");
+  el.className = "card";
+  el.innerHTML =
+    '<h2>Ear training: name that progression</h2>' +
+    '<div class="quiz-controls">' +
+      '<button class="play-btn" id="new-prog-btn">Play a new progression</button>' +
+      '<button class="replay-btn" id="prog-replay-btn" style="display:none;">Replay</button>' +
+    '</div>' +
+    '<div class="feedback" id="prog-feedback"></div>' +
+    '<div class="answer-grid" id="prog-answer-grid"></div>' +
+    '<div class="stats-row" id="prog-quiz-stats"></div>' +
+    '<div class="weak-list" id="prog-weak-list"></div>';
+
+  setTimeout(()=>{
+    document.getElementById("new-prog-btn").addEventListener("click", newProgQuestion);
+    document.getElementById("prog-replay-btn").addEventListener("click", ()=>{
+      if(currentProgQuestion) playProgression(progressionChords(chordRoot, currentProgQuestion.degrees), 0.7, 0.05);
+    });
+    renderProgQuizStats();
+  }, 0);
+  return el;
+}
+
+function newProgQuestion(){
+  const p = PROGRESSIONS[Math.floor(Math.random()*PROGRESSIONS.length)];
+  currentProgQuestion = { id:p.id, degrees:p.degrees, roman: progressionRoman(p.degrees) };
+  playProgression(progressionChords(chordRoot, p.degrees), 0.7, 0.05);
+
+  document.getElementById("prog-replay-btn").style.display = "inline-block";
+  document.getElementById("prog-feedback").textContent = "";
+  document.getElementById("prog-feedback").className = "feedback";
+
+  const grid = document.getElementById("prog-answer-grid");
+  grid.innerHTML = "";
+  PROGRESSIONS.forEach(opt=>{
+    const btn = document.createElement("button");
+    btn.className = "answer-btn";
+    btn.textContent = progressionRoman(opt.degrees);
+    btn.onclick = ()=> checkProgAnswer(opt, btn);
+    grid.appendChild(btn);
+  });
+}
+
+function checkProgAnswer(chosen, btnEl){
+  if(!currentProgQuestion) return;
+  const correct = chosen.id === currentProgQuestion.id;
+  const grid = document.getElementById("prog-answer-grid");
+  grid.querySelectorAll(".answer-btn").forEach(b=>b.disabled = true);
+
+  const key = currentProgQuestion.id;
+  if(!progress.progressionStats[key]) progress.progressionStats[key] = {correct:0, wrong:0};
+  if(correct){
+    progress.progressionStats[key].correct++;
+    progSessionCorrect++;
+    btnEl.classList.add("correct");
+    document.getElementById("prog-feedback").textContent = "Correct — that was " + currentProgQuestion.roman + ".";
+    document.getElementById("prog-feedback").className = "feedback correct";
+  } else {
+    progress.progressionStats[key].wrong++;
+    btnEl.classList.add("wrong");
+    grid.querySelectorAll(".answer-btn").forEach(b=>{
+      if(b.textContent === currentProgQuestion.roman) b.classList.add("correct");
+    });
+    document.getElementById("prog-feedback").textContent = "Not quite — that was " + currentProgQuestion.roman + ".";
+    document.getElementById("prog-feedback").className = "feedback wrong";
+  }
+  progSessionTotal++;
+  saveProgress();
+  renderProgQuizStats();
+}
+
+function renderProgQuizStats(){
+  const statsEl = document.getElementById("prog-quiz-stats");
+  const weakEl = document.getElementById("prog-weak-list");
+  if(!statsEl) return;
+  const stats = progress.progressionStats || {};
+  const totalAttempts = Object.values(stats).reduce((s,v)=>s+v.correct+v.wrong,0);
+  const totalCorrect = Object.values(stats).reduce((s,v)=>s+v.correct,0);
+  const pct = totalAttempts ? Math.round(totalCorrect/totalAttempts*100) : 0;
+  statsEl.innerHTML =
+    '<span>This session: <strong>'+progSessionCorrect+'/'+progSessionTotal+'</strong></span>' +
+    '<span>All-time accuracy: <strong>'+pct+'%</strong> ('+totalAttempts+' attempts)</span>';
+
+  const weak = Object.keys(stats)
+    .map(k=>{
+      const s = stats[k];
+      const attempts = s.correct+s.wrong;
+      const p = PROGRESSIONS.find(pr=>pr.id===k);
+      return {name: p?progressionRoman(p.degrees):k, acc: attempts ? s.correct/attempts : 0, attempts};
+    })
+    .filter(x=>x.attempts >= 2)
+    .sort((a,b)=>a.acc-b.acc)
+    .slice(0,3);
+  weakEl.innerHTML = weak.length
+    ? "Focus on: " + weak.map(w=>'<span>'+w.name+'</span>').join(", ")
+    : "";
+}
+
+// ---- Apply ----
+function buildProgressionApplyCard(){
+  const el = document.createElement("section");
+  el.className = "card";
+  el.innerHTML = '<h2>This week in FL Studio</h2><p>Pick one, try it before checking the reference chart.</p><div id="prog-prompt-list"></div>';
+  setTimeout(renderProgPrompts, 0);
+  return el;
+}
+function renderProgPrompts(){
+  const list = document.getElementById("prog-prompt-list");
+  if(!list) return;
+  list.innerHTML = "";
+  PROG_APPLY_PROMPTS.forEach(p=>{
+    const done = !!(progress.appliedProgPrompts||{})[p.id];
+    const row = document.createElement("div");
+    row.className = "prompt-item" + (done ? " done" : "");
+    row.innerHTML = '<input type="checkbox" '+(done?"checked":"")+'><span>'+p.text+'</span>';
+    row.querySelector("input").addEventListener("change", e=>{
+      if(!progress.appliedProgPrompts) progress.appliedProgPrompts = {};
+      if(e.target.checked) progress.appliedProgPrompts[p.id] = Date.now();
+      else delete progress.appliedProgPrompts[p.id];
+      saveProgress();
+      renderProgPrompts();
     });
     list.appendChild(row);
   });

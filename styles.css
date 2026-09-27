@@ -5,6 +5,7 @@
   --line:#4a3428;
   --text:#f2e9dc;
   --text-dim:#b9a693;
+  --text-body:#d6c8b8;
   --tension:#c94f6d;
   --resolution:#e0a83c;
   --movement:#6f9c8d;
@@ -17,7 +18,11 @@
 *{box-sizing:border-box;}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans);padding:32px 20px 80px;}
 .wrap{max-width:1180px;margin:0 auto;}
-h1{font-family:var(--font-display);font-size:36px;font-weight:650;margin:0 0 4px;letter-spacing:-0.01em;}
+h1{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-size:36px;font-weight:650;margin:0 0 4px;letter-spacing:-0.01em;}
+.mark{height:0.7em;width:auto;flex:0 0 auto;}
+.mark-tension{fill:var(--tension);}
+.mark-movement{fill:var(--movement);}
+.mark-resolution{fill:var(--resolution);}
 .tagline{color:var(--text-dim);font-size:15px;max-width:56ch;line-height:1.5;}
 
 .tabs{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 24px;}
@@ -28,6 +33,9 @@ h1{font-family:var(--font-display);font-size:36px;font-weight:650;margin:0 0 4px
 section.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 24px;margin-bottom:20px;}
 section.card h2{font-family:var(--font-display);font-size:20px;font-weight:650;margin:0 0 10px;}
 section.card p{color:var(--text-dim);font-size:14.5px;line-height:1.6;margin:0 0 8px;}
+section.concept-card p{color:var(--text-body);}
+.fn-list{list-style:none;margin:16px 0;padding:0;display:flex;flex-direction:column;gap:12px;}
+.fn-list li{color:var(--text-body);font-size:14.5px;line-height:1.6;}
 .soon-card{text-align:center;padding:50px 20px;color:var(--text-dim);}
 .soon-card h2{color:var(--text);}
 
@@ -76,6 +84,11 @@ section.card p{color:var(--text-dim);font-size:14.5px;line-height:1.6;margin:0 0
 .fn-badge.dominant{background:var(--tension);color:#2a0d14;}
 .fn-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;font-size:12.5px;color:var(--text-dim);}
 .fn-legend span{display:inline-flex;align-items:center;gap:6px;}
+
+.prog-card{display:flex;flex-direction:column;}
+.prog-roman{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin-bottom:12px;}
+.prog-arrow{color:var(--text-dim);margin:0 4px;font-family:var(--font-mono);font-size:13px;}
+.prog-note{color:var(--text-dim);font-size:13px;line-height:1.5;margin:0 0 14px;flex:1;}
 
 .demo-grid{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
 .demo-row{display:flex;align-items:center;gap:12px;background:var(--panel-alt);border:1px solid var(--line);border-radius:8px;padding:10px 14px;flex-wrap:wrap;}
